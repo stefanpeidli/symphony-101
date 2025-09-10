@@ -27,7 +27,7 @@ basespace_project_ids: # TODO: replace with ENA eventually
   Symphony_Repeat: 403174211
   Cas13_screens_1: 408146834
 cell_line_colors:
-  A549: 'tab:green'
-  H1299: 'tab:orange'
-  H1975: 'tab:blue'
+  A549: "#33A02C"
+  H1299: "#1964B0"
+  H1975: "#F4A637"
   pool: 'tab:gray'
