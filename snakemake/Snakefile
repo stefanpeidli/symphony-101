@@ -36,7 +36,6 @@ DATADIR = Path(config['DATADIR'])
 
 ### SAMPLES ###
 fastq_files = pd.read_csv('../resources/library/SYM101_fastqs.csv', index_col=0, names=['sample_name', 'lane_type'])
-print(fastq_files.head())
 sample_names = list(fastq_files.index)
 single_lane_samples = list(fastq_files[fastq_files.lane_type=='single_lane'].index)
 double_lane_samples = list(fastq_files[fastq_files.lane_type=='two_lanes'].index)
