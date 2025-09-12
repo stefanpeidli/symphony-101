@@ -6,6 +6,7 @@ logs
 *.gene_summary.txt
 *.sgrna_summary.txt
 data
+perm_data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

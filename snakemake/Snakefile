@@ -32,12 +32,15 @@ conda: "../environments/snake_env.yaml"
 
 ### PATHS ###
 TEMPDIR = Path(config['TEMPDIR'])
+DATADIR = Path(config['DATADIR'])
 
 ### SAMPLES ###
-sample_names = list(pd.read_csv('../resources/SYM101_fastqs.txt', sep='\t', index_col=0).index)
-sample_names = [x for x in sample_names if 'Undetermined_S0' not in x]
-assert len(sample_names) == 6*(3*3) + 3, f"Expected 57 (6TP x 3lines x 3reps + 3 Pools) samples, got " + str(len(sample_names))
-guide_df = pd.read_csv('../resources/all_gRNA_data.csv', index_col='unique_guide_name')
+fastq_files = pd.read_csv('../resources/library/SYM101_fastqs.csv', index_col=0, names=['sample_name', 'lane_type'])
+print(fastq_files.head())
+sample_names = list(fastq_files.index)
+single_lane_samples = list(fastq_files[fastq_files.lane_type=='single_lane'].index)
+double_lane_samples = list(fastq_files[fastq_files.lane_type=='two_lanes'].index)
+guide_df = pd.read_csv('../resources/library/all_gRNA_data.csv', index_col='unique_guide_name')
 cell_line_dict = config['cell_lines']
 cell_lines = list(cell_line_dict.values())
 ena_sample_mapping = pd.read_csv("../resources/ENA/ENA_samples_PRJEB82598.tsv", index_col=15, sep='\t')
@@ -61,7 +64,7 @@ rule all:
                line=['alllines', 'H1975', 'H1299', 'A549'], 
                counts=['counts', 'counts_filtered'], 
                feature=['gene', 'transcript']),
-        '../results/mageck/SYM101_mageck_filtered_guides_v2.tsv'
+        '../results/mageck/SYM101_mageck_filtered_guides_v2.tsv',
         ## MAGeCK MLE
         expand('../results/mageck/summaries/{feature}_{time_key}_SYM101_{counts}_mageck_mle.sgrna_summary.txt', 
                feature=['gene', 'transcript'], 
@@ -77,6 +80,20 @@ rule all:
                cell_line=cell_lines),
 
 ### Read processing and quantification ###
+rule gunzip_fastq:
+    input:
+        DATADIR / 'fastq/{sample}_L00{i}_R1_001.fastq.gz'
+    output:
+        TEMPDIR / 'fastq/{sample}_L00{i}_R1_001.fastq'
+    resources:
+        mem_mb=4000,
+        disk_mb=4000,
+        time='00:30:00',
+    shell:
+        """
+        gunzip -c {input} > {output}
+        """
+
 rule fastqc:
     # Produces FastQC reports for the raw FASTQ files.
     input:
@@ -95,8 +112,10 @@ rule fastqc:
 rule multiqc:
     # Produces a MultiQC report from the FastQC reports and samtools stats.
     input:
-        fastqc=expand(TEMPDIR / "fastqc/{sample}_L00{i}.html", sample=sample_names, i=[1,2]),
-        samtools=expand(TEMPDIR / "hisat2/{sample}_L00{i}_R1_001_custom_trimmed_stats.txt", sample=sample_names, i=[1,2]),
+        fastqc=expand(TEMPDIR / "fastqc/{sample}_L00{i}.html", sample=double_lane_samples, i=[1,2]),
+        fastqc_single=expand(TEMPDIR / "fastqc/{sample}_L001.html", sample=single_lane_samples),
+        samtools=expand(TEMPDIR / "hisat2/{sample}_L00{i}_R1_001_custom_trimmed_stats.txt", sample=double_lane_samples, i=[1,2]),
+        samtools_single=expand(TEMPDIR / "hisat2/{sample}_L001_R1_001_custom_trimmed_stats.txt", sample=single_lane_samples),
     output:
         "../results/multiqc/multiqc.html",
         directory("../results/multiqc/multiqc_data"),
@@ -139,7 +158,8 @@ rule custom_trimming:
 rule custom_trimming_summary:
     # Summarizes the results of the custom trimming.
     input:
-        expand(TEMPDIR / 'trimmed/qc/{sample}_L00{i}_R1_001_custom_trimmed_qc.csv', sample=sample_names, i=[1,2])
+        expand(TEMPDIR / 'trimmed/qc/{sample}_L00{i}_R1_001_custom_trimmed_qc.csv', sample=sample_names, i=[1,2]),
+        expand(TEMPDIR / 'trimmed/qc/{sample}_L001_R1_001_custom_trimmed_qc.csv', sample=single_lane_samples)
     output:
         table="../results/trimming/trimmed_summary.csv",
         fig1="../results/trimming/trimmed_summary_scatter.pdf",
@@ -181,9 +201,9 @@ rule custom_trimming_summary:
 rule guide_to_fasta:
     # Converts the guide sequences to FASTA format for alignment with HISAT2.
     input:
-        '../resources/all_gRNA_data.csv'
+        '../resources/library/all_gRNA_data.csv'
     output:
-        '../resources/SYM101_guides.fa'
+        '../resources/library/SYM101_guides.fa'
     run:
         from tqdm.auto import tqdm
         guide_df = pd.read_csv(input[0], index_col='unique_guide_name')
@@ -197,7 +217,7 @@ rule guide_to_fasta:
 rule hisat2_guide_index:
     # Builds the HISAT2 index for the guide sequences.
     input:
-        '../resources/SYM101_guides.fa'
+        '../resources/library/SYM101_guides.fa'
     output:
         expand(TEMPDIR / 'hisat2/index.{i}.ht2', i=range(1,9))
     threads: 8
@@ -264,13 +284,14 @@ rule count:
 rule merge_counts:
     # Merges the counts from all samples into a single table.
     input:
-        counts=expand(TEMPDIR / 'counts/{sample}_L00{i}_counts.txt', sample=sample_names, i=[1,2]),
-        guide_df='../resources/all_gRNA_data.csv'
+        counts_double=expand(TEMPDIR / 'counts/{sample}_L00{i}_counts.txt', sample=double_lane_samples, i=[1,2]),
+        counts_single=expand(TEMPDIR / 'counts/{sample}_L001_counts.txt', sample=single_lane_samples),
+        guide_df='../resources/library/all_gRNA_data.csv'
     output:
         TEMPDIR / 'SYM101_counts.csv'
     run:
         guide_df = pd.read_csv(input.guide_df, index_col='unique_guide_name')
-        counts = {Path(x).name.split('_counts')[0]: pd.read_csv(x, sep='\t', header=None, index_col=0) for x in input.counts}
+        counts = {Path(x).name.split('_counts')[0]: pd.read_csv(x, sep='\t', header=None, index_col=0) for x in input.counts_double + input.counts_single}
         df = pd.concat(counts, axis=1)
         df.columns = df.columns.droplevel(1)
         df.index.name = 'unique_guide_name'
