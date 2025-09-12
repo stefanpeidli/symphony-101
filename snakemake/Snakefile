@@ -54,29 +54,29 @@ rule all:
         "../results/trimming/trimmed_summary.csv",
         ## Counts
         TEMPDIR / 'SYM101_counts.csv',
-        TEMPDIR / 'SYM101_counts_filtered.csv',  # removed "bad" guides identified with MAGeCK
         TEMPDIR / 'SYM101_counts_corrected.csv',  # corrected sample swap
+        # TEMPDIR / 'SYM101_counts_filtered.csv',  # removed "bad" guides identified with MAGeCK
 
         # Statistical Analysis
-        ## MAGeCK test
-        expand('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.sgrna_summary.txt', 
-               line=['alllines', 'H1975', 'H1299', 'A549'], 
-               counts=['counts', 'counts_filtered'], 
-               feature=['gene', 'transcript']),
-        '../results/mageck/SYM101_mageck_filtered_guides_v2.tsv',
-        ## MAGeCK MLE
-        expand('../results/mageck/summaries/{feature}_{time_key}_SYM101_{counts}_mageck_mle.sgrna_summary.txt', 
-               feature=['gene', 'transcript'], 
-               time_key=['alltimes', 'TP1', 'TP2', 'TP3', 'TP4', 'TP5','TP6'], 
-               counts=['counts', 'counts_filtered']),
-        ## BAGEL2
-        expand('../results/bagel2/SYM101_{counts}_bagel_pr_gene.tsv', 
-               counts=['counts', 'counts_filtered']),
-        ## Gscreend
-        expand('../results/gscreend/{feature}_SYM101_{counts}_{cell_line}_gscreend_results.tsv',
-               feature=['gene', 'transcript'], 
-               counts=['counts', 'counts_filtered'], 
-               cell_line=cell_lines),
+        # ## MAGeCK test
+        # expand('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.sgrna_summary.txt', 
+        #        line=['alllines', 'H1975', 'H1299', 'A549'], 
+        #        counts=['counts', 'counts_filtered'], 
+        #        feature=['gene', 'transcript']),
+        # '../results/mageck/SYM101_mageck_filtered_guides_v2.tsv',
+        # ## MAGeCK MLE
+        # expand('../results/mageck/summaries/{feature}_{time_key}_SYM101_{counts}_mageck_mle.sgrna_summary.txt', 
+        #        feature=['gene', 'transcript'], 
+        #        time_key=['alltimes', 'TP1', 'TP2', 'TP3', 'TP4', 'TP5','TP6'], 
+        #        counts=['counts', 'counts_filtered']),
+        # ## BAGEL2
+        # expand('../results/bagel2/SYM101_{counts}_bagel_pr_gene.tsv', 
+        #        counts=['counts', 'counts_filtered']),
+        # ## Gscreend
+        # expand('../results/gscreend/{feature}_SYM101_{counts}_{cell_line}_gscreend_results.tsv',
+        #        feature=['gene', 'transcript'], 
+        #        counts=['counts', 'counts_filtered'], 
+        #        cell_line=cell_lines),
 
 ### Read processing and quantification ###
 rule gunzip_fastq:
