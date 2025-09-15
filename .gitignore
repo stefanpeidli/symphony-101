@@ -7,6 +7,9 @@ logs
 *.sgrna_summary.txt
 data
 perm_data
+*.Rnw
+*.report.Rmd
+*_counts_mageck.R
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
