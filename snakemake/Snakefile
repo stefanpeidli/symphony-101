@@ -55,28 +55,20 @@ rule all:
         ## Counts
         TEMPDIR / 'SYM101_counts.csv',
         TEMPDIR / 'SYM101_counts_corrected.csv',  # corrected sample swap
-        # TEMPDIR / 'SYM101_counts_filtered.csv',  # removed "bad" guides identified with MAGeCK
+        TEMPDIR / 'SYM101_counts_filtered.csv',  # removed "bad" guides identified with MAGeCK
 
         # Statistical Analysis
-        # ## MAGeCK test
-        # expand('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.sgrna_summary.txt', 
-        #        line=['alllines', 'H1975', 'H1299', 'A549'], 
-        #        counts=['counts', 'counts_filtered'], 
-        #        feature=['gene', 'transcript']),
-        # '../results/mageck/SYM101_mageck_filtered_guides_v2.tsv',
-        # ## MAGeCK MLE
-        # expand('../results/mageck/summaries/{feature}_{time_key}_SYM101_{counts}_mageck_mle.sgrna_summary.txt', 
-        #        feature=['gene', 'transcript'], 
-        #        time_key=['alltimes', 'TP1', 'TP2', 'TP3', 'TP4', 'TP5','TP6'], 
-        #        counts=['counts', 'counts_filtered']),
-        # ## BAGEL2
-        # expand('../results/bagel2/SYM101_{counts}_bagel_pr_gene.tsv', 
-        #        counts=['counts', 'counts_filtered']),
-        # ## Gscreend
-        # expand('../results/gscreend/{feature}_SYM101_{counts}_{cell_line}_gscreend_results.tsv',
-        #        feature=['gene', 'transcript'], 
-        #        counts=['counts', 'counts_filtered'], 
-        #        cell_line=cell_lines),
+        ## MAGeCK test, only for TP6 (TP4 for SYM4 and SYM5)
+        expand('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.sgrna_summary.txt', 
+               line=['alllines', 'H1975', 'H1299', 'A549', 'SYM4', 'SYM5'], 
+               counts=['counts', 'counts_filtered'], 
+               feature=['gene', 'transcript']),
+        '../results/mageck/SYM101_mageck_filtered_guides_v2.tsv',
+        ## MAGeCK MLE for each time point and feature
+        expand('../results/mageck/summaries/{feature}_{time_key}_SYM101_{counts}_mageck_mle.sgrna_summary.txt', 
+               feature=['gene', 'transcript'], 
+               time_key=['alltimes', 'TP1', 'TP2', 'TP3', 'TP4', 'TP5','TP6'], 
+               counts=['counts', 'counts_filtered']),
 
 ### Read processing and quantification ###
 rule gunzip_fastq:
@@ -330,6 +322,7 @@ rule mageck_define_controls:
 
 rule mageck_test_prepare_inputs:
     # Prepares the input files for MAGeCK test.
+    # Uses TP6 or TP4 as the final time point, removes initial time points and other cell lines as needed.
     input:
         counts=TEMPDIR / 'SYM101_{counts}.csv'
     output:
@@ -340,7 +333,8 @@ rule mageck_test_prepare_inputs:
         line = wildcards.line
         df = pd.read_csv(input.counts, index_col=0)
         # Remove initial time points
-        df = df.loc[:, ~df.columns.str.contains('TP1|TP2|TP3|TP4|TP5')].copy()  
+        timepoints_removal = 'TP1|TP2|TP3|TP5' if (line == 'SYM4' or line == 'SYM5') else 'TP1|TP2|TP3|TP4|TP5'  # we only have TP4 for both SYM4 and SYM5
+        df = df.loc[:, ~df.columns.str.contains(timepoints_removal)].copy()  
         # Remove other lines
         if line == 'alllines':
             df = df
@@ -381,7 +375,11 @@ rule mageck_test:
         control=TEMPDIR / 'mageck/SYM101_{counts}_control_guides.txt',
         day0=TEMPDIR / 'mageck/{line}/SYM101_{counts}_day0_samples.txt',
     output:
-        '../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.sgrna_summary.txt'
+        '../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.sgrna_summary.txt',  # only this file is needed for downstream analysis
+        temp('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck_summary.Rnw'),
+        temp('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.R'),
+        temp('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.report.Rmd'),
+        temp('../results/mageck/summaries/{line}/{feature}_SYM101_{counts}_mageck.log'),
     conda: "../environments/mageck_env.yaml"
     shell:
         """
@@ -524,156 +522,3 @@ rule mageck_filter_guides:
     conda: "../environments/sym101py_env.yaml"
     script:
         'scripts/snake_mageck_filter_guides.py'
-
-rule bagel2_prepare:
-    # Prepares the input files for BAGEL2.
-    input:
-        counts=TEMPDIR / 'SYM101_{counts}.csv'
-    output:
-        counts=temp(TEMPDIR / 'bagel2/SYM101_{counts}_bagel2_input_{feature}_{time}_{line}.txt')
-    wildcard_constraints:
-        feature="gene|transcript",
-        time="alltimes|TP5TP6",
-        line="alllines|H1975|H1299|A549"
-    run:
-        df = pd.read_csv(input.counts, index_col=0)
-        df.index.name = 'sgRNA'
-
-        # Select feature grouping
-        if wildcards.feature == 'gene':
-            # Set gene as target feature
-            sdf = df.drop(['Transcript_ID', 'ensembl_gene_id', 'transcript_biotype',
-                'GuideName', 'GuideSeq', 'MatchPos', 'Guide_Score', 'Region',
-                'transcript_length', 'gRNA_occurence', 'transcript_per_gene'], axis=1)
-        elif wildcards.feature == 'transcript':
-            # Set non-unique transcripts as target feature
-            # Some transcript have only single guide --> remove them
-            sdf = df.drop(['ensembl_gene_id', 'Gene', 'transcript_biotype',
-                'GuideName', 'GuideSeq', 'MatchPos', 'Guide_Score', 'Region',
-                'transcript_length', 'gRNA_occurence', 'transcript_per_gene'], axis=1)
-            cts = sdf.value_counts('Transcript_ID')
-            nonunique_IDs = cts[cts > 2].index
-            sdf = sdf[sdf.Transcript_ID.isin(nonunique_IDs)]
-        
-        # select time points
-        if wildcards.time == 'alltimes':
-            # Use all timepoints
-            sdf = sdf
-        elif wildcards.time == 'TP5TP6':
-            # Use only TP5 and TP6
-            mask = [x for x in sdf.columns if ('TP5' in x or 'TP6' in x) or ('pool' in x or x=='Gene')]
-            sdf = sdf.loc[:, mask]
-        
-        # select cell lines
-        if wildcards.line == 'alllines':
-            # Use all cell lines
-            sdf = sdf
-        else:
-            # Use only one cell line (with pools still included)
-            line = wildcards.line
-            mask = [(cell_line_dict[int(x.split('-')[1])]==line) if 'sym' in x else True if ('pool' in x or x=='Gene') else False for x in sdf.columns]  # pool and cell line
-            sdf = sdf.loc[:, mask]
-
-        # Save as txt
-        sdf.to_csv(output.counts, sep='\t')
-
-rule install_BAGEL_git:
-    # Installs BAGEL2 from the git repository.
-    output:
-        bagel_py=TEMPDIR / "bagel_software/BAGEL.py",
-        bagel_dir=directory(TEMPDIR / "bagel_software")
-    shell:
-        """
-        cd TEMPDIR
-        git clone https://github.com/hart-lab/bagel bagel_software
-        """
-
-rule bagel2_fc:
-    # Calculates fold changes for BAGEL2.
-    input:
-        bagel_py=TEMPDIR / "bagel_software/BAGEL.py",
-        bagel_counts=TEMPDIR / 'bagel2/SYM101_{counts}_bagel2_input_{index}.txt'
-    output:
-        fc=TEMPDIR / 'bagel2/SYM101_{counts}_bagel_{index}.foldchange',
-        norm=TEMPDIR / 'bagel2/SYM101_{counts}_bagel_{index}.normed_readcount'
-    shell:
-        """
-        # Calculate Fold Changes
-        {input.bagel_py} fc -i {input.bagel_counts} \
-            -o {TEMPDIR}/bagel2/SYM101_{wildcards.counts}_bagel_{wildcards.index} \
-            -c 1,2,3
-        """
-
-rule bagel2_bf:
-    # Calculates Bayes Factors for BAGEL2.
-    input:
-        bagel_py=TEMPDIR / "bagel_software/BAGEL.py",
-        fc=TEMPDIR / 'bagel2/SYM101_{counts}_bagel_{index}.foldchange',
-        bagel_dir=TEMPDIR / "bagel_software"
-    output:
-        bf='../results/bagel2/SYM101_{counts}_bagel_bf_{index}.tsv'
-    shell:
-        """
-        # Number of columns in input tsv
-        D=$(head -n 1 {input.fc} | tr '\\t' '\\n' | wc -l)  # count the number of columns
-        D=$((D - 2))  # remove the first two columns (guide and gene names)
-        S=$(seq -s, 1 $D)  # create a string of numbers from 1 to D (Bagel needs this)
-        echo $S
-
-        # Calculate Bayes Factors
-        {input.bagel_py} bf -i {input.fc} \
-            -o {output.bf} \
-            -e {input.bagel_dir}/CEGv2.txt \
-            -n {input.bagel_dir}/NEGv1.txt \
-            -c $S
-        """
-
-rule bagel2_pr:
-    # Calculates Precision-Recall for BAGEL2.
-    input:
-        bagel_py=TEMPDIR / "bagel_software/BAGEL.py",
-        bf='../results/bagel2/SYM101_{counts}_bagel_bf_{index}.tsv',
-        bagel_dir=TEMPDIR / "bagel_software"
-    output:
-        pr='../results/bagel2/SYM101_{counts}_bagel_pr_{index}.tsv'
-    shell:
-        """
-        # Calculate Precision-Recall
-        {input.bagel_py} pr -i {input.bf} \
-            -o {output.pr} \
-            -e {input.bagel_dir}/CEGv2.txt \
-            -n {input.bagel_dir}/NEGv1.txt
-        """
-
-rule bagel2_merge:
-    # Merges the BAGEL2 results from all cell lines and time points.
-    input:
-        pr=expand('../results/bagel2/SYM101_{{counts}}_bagel_pr_gene_{time}_{line}.tsv', time=['alltimes', 'TP5TP6'], line=['alllines', 'H1975', 'H1299', 'A549'])
-    output:
-        '../results/bagel2/SYM101_{counts}_bagel_pr_gene.tsv'
-    run:
-        # merge BAGEL2 results
-        file = f'../results/bagel2/SYM101_counts_bagel_pr_gene.tsv'
-
-        # aggregate results
-        datas = {}
-        for line in ['alllines', 'A549', 'H1299', 'H1975']:
-            for time in ['alltimes', 'TP5TP6']:
-                tdf = pd.read_table(f'../results/bagel2/SYM101_{wildcards.counts}_bagel_pr_gene_{time}_{line}.tsv', index_col='Gene')
-                datas[(line, time)] = tdf
-        df = pd.concat(datas, axis=1)
-
-        # write to file
-        df.to_csv(output[0], sep='\t')
-
-rule gscreend:
-    # Runs Gscreend on the prepared input files.
-    input:
-        counts=TEMPDIR / 'SYM101_{counts}.csv'
-    output:
-        '../results/gscreend/{feature}_SYM101_{counts}_{cell_line}_gscreend_results.tsv'
-    conda: "../environments/gscreend_env.yaml"
-    wildcard_constraints:
-        counts="counts|counts_filtered"
-    script:
-        "scripts/snake_gscreend.R"

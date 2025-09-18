@@ -113,3 +113,14 @@ sym-03-03-TP5_S51_L001_R1_001_custom_trimmed_stats	3067471.0	7915.0	467163.0
 sym-03-03-TP5_S51_L002_R1_001_custom_trimmed_stats	3122753.0	8782.0	362010.0
 sym-03-03-TP6_S54_L001_R1_001_custom_trimmed_stats	3392698.0	9190.0	522914.0
 sym-03-03-TP6_S54_L002_R1_001_custom_trimmed_stats	3457530.0	10454.0	406287.0
+sym-04-01-TP2_S1_L001_R1_001_custom_trimmed_stats	700002.0	4204.0	100779.0
+sym-04-01-TP4-TMP_S6_L001_R1_001_custom_trimmed_stats	657871.0	4075.0	96495.0
+sym-04-01-TP4_S5_L001_R1_001_custom_trimmed_stats	891985.0	5524.0	127447.0
+sym-04-01-TP4_S6_L001_R1_001_custom_trimmed_stats	657871.0	4075.0	96495.0
+sym-04-02-TP2_S2_L001_R1_001_custom_trimmed_stats	719818.0	4165.0	101925.0
+sym-04-02-TP4-S8_L001_R1_001_custom_trimmed_stats	765984.0	4724.0	115005.0
+sym-04-02-TP4-TMP_S8_L001_R1_001_custom_trimmed_stats	765984.0	4724.0	115005.0
+sym-04-02-TP4_S7_L001_R1_001_custom_trimmed_stats	655253.0	3862.0	101761.0
+sym-04-02-TP5_S9_L001_R1_001_custom_trimmed_stats	854612.0	5149.0	127590.0
+sym-05-01-TP4_S3_L001_R1_001_custom_trimmed_stats	764308.0	4632.0	111553.0
+sym-05-02-TP4_S4_L001_R1_001_custom_trimmed_stats	665225.0	4026.0	96631.0

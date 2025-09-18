@@ -12,6 +12,8 @@ cell_lines:
   01: 'H1975'
   02: 'H1299'
   03: 'A549'
+  04: 'SYM4'
+  05: 'SYM5'
 Line_to_SIDM:
   - A549: SIDM00903
   - H1299: SIDM00649
@@ -32,3 +34,5 @@ cell_line_colors:
   H1299: "#1964B0"
   H1975: "#F4A637"
   pool: 'tab:gray'
+  SYM4: '#7f7f7f'
+  SYM5: '#c7c7c7'

@@ -14,3 +14,4 @@ This repository contains the SYMPHONY Screen SYM101 pipeline, which is a Snakema
 - Process raw data from the sequence reads to count matrix
 - Run statistical analysis tools (BAGEL, MAGeCK, gscreend) to produce result tables
 - Figures are then plotted in notebooks (see `notebooks/`)
+

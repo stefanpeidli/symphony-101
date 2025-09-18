@@ -18,8 +18,8 @@ with open('../configuration/config.yaml', "r") as file:
     config = yaml.load(file, Loader=yaml.FullLoader)
 cell_line_dict=config['cell_lines']
 
-
-all_guide_rankings = pd.concat({cell_line: pd.read_csv(f'../results/mageck/summaries/{cell_line}/gene_pooled_screen_1_counts_mageck.sgrna_summary.txt', sep='\t', index_col=0) for cell_line in cell_line_dict.values()}, axis=1)
+cell_lines = ['H1299', 'H1975', 'A549']  # exclude SYM4 and SYM5 in determining thresholds
+all_guide_rankings = pd.concat({cell_line: pd.read_csv(f'../results/mageck/summaries/{cell_line}/gene_SYM101_counts_mageck.sgrna_summary.txt', sep='\t', index_col=0) for cell_line in cell_line_dict.values()}, axis=1)
 # aggregate
 all_guide_rankings[('summary', 'max_score')] = all_guide_rankings.loc[:, (slice(None), 'score')].max(axis=1)
 all_guide_rankings[('summary', 'mean_score')] = all_guide_rankings.loc[:, (slice(None), 'score')].mean(axis=1)

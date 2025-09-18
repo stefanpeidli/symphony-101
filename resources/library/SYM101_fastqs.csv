@@ -57,9 +57,11 @@ sym-03-02-TP2_S41,two_lanes
 sym-03-02-TP4_S47,two_lanes
 sym-03-03-TP3_S45,two_lanes
 sym-04-01-TP2_S1,single_lane
+sym-04-01-TP4-TMP_S6,single_lane
 sym-04-01-TP4_S5,single_lane
-sym-04-01-TP4_S6,single_lane
 sym-04-02-TP2_S2,single_lane
-sym-04-02-TP4-S8,single_lane
+sym-04-02-TP4-TMP_S8,single_lane
 sym-04-02-TP4_S7,single_lane
 sym-04-02-TP5_S9,single_lane
+sym-05-01-TP4_S3,single_lane
+sym-05-02-TP4_S4,single_lane
